@@ -13,7 +13,7 @@
                     "debugMode": false
                 },
                 "assets": {
-                    "host": "https://github.com/noamaw/wheelWidget/blob/25ca65d4a973b444b3baf709f120c38ecdb13615/"
+                    "host": "https://raw.githubusercontent.com/noamaw/wheelWidget/refs/heads/main/"
                 }
             },
             "wheel": {
