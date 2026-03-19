@@ -13,7 +13,7 @@
                     "debugMode": false
                 },
                 "assets": {
-                    "host": "https://drive.google.com/uc?export=view&id="
+                    "host": "https://github.com/noamaw/wheelWidget/blob/25ca65d4a973b444b3baf709f120c38ecdb13615/"
                 }
             },
             "wheel": {
@@ -24,10 +24,10 @@
                     "spinEasing": "easeInOutCubic"
                 },
                 "assets": {
-                    "bg": "1LQBHiIrO92sZ1lFaaqkH_yE5G7A6tK5B",
-                    "wheelFrame": "10cFF-MGK_rbEh8TnprrmS0uHBOUN7wjN",
-                    "wheelSpin": "1qx0XNFz6wueMRES02D0QS27fMDfxoBAJ",
-                    "wheel": "1gRxQmL7kLnxlTKRk6TKa-YaRKcf61tI9"
+                    "bg": "bg.png",
+                    "wheelFrame": "wheel-frame.png",
+                    "wheelSpin": "wheel-spin.png",
+                    "wheel": "wheel.png"
                 }
             }
         }
