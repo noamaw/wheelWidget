@@ -14,6 +14,11 @@ class AssetDownloader(
 ) {
     suspend fun downloadImage(url: String, fileName: String): File {
         return withContext(Dispatchers.IO) {
+            val file = File(context.filesDir, fileName)
+            if (file.exists()) {
+                return@withContext file
+            }
+
             val request = Request.Builder().url(url).build()
             val response = client.newCall(request).execute()
 
@@ -21,11 +26,6 @@ class AssetDownloader(
                 throw okio.IOException("Failed to download image")
             }
             Log.d("CONTENT_TYPE", response.header("Content-Type") ?: "none")
-
-            val file = File(context.filesDir, fileName)
-            if (file.exists()) {
-                return@withContext file
-            }
 
             response.body?.byteStream()?.use { input ->
                 file.outputStream().use { output ->
@@ -35,14 +35,6 @@ class AssetDownloader(
 
             file
         }
-    }
-
-    fun cacheJson(json: String) {
-        File(context.filesDir, "config.json").writeText(json)
-    }
-
-    fun getCachedJson(): String {
-        return File(context.filesDir, "config.json").readText()
     }
 
 }

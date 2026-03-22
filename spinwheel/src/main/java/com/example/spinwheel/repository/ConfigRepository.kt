@@ -2,6 +2,7 @@ package com.example.spinwheel.repository
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import android.util.Log
 import com.example.spinwheel.models.RootConfig
 import com.example.spinwheel.models.WheelUiModel
 import com.example.spinwheel.models.WidgetConfig
@@ -11,6 +12,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 import java.io.IOException
 
 class ConfigRepository(
@@ -21,13 +23,39 @@ class ConfigRepository(
     private val assetDownloader = AssetDownloader(context, client)
 
     suspend fun getConfig(url: String): WidgetConfig {
-        try {
-            val json = fetchWithRetry(url, 3)
-            val root = Json.decodeFromString<RootConfig>(json)
-            return root.data.first()
-        } catch (e: Exception) {
-            println(e)
-            throw e
+        return withContext(Dispatchers.IO) {
+            val cachedJson = getCachedJson(context)
+
+            if (cachedJson != null) {
+                val cachedRoot = Json.decodeFromString<RootConfig>(cachedJson)
+                val cachedConfig = cachedRoot.data.first()
+
+                val cacheExpiration = cachedConfig.network.attributes.cacheExpiration
+
+                if (!shouldFetch(cacheExpiration)) {
+                    Log.d("CONFIG", "Using cached config")
+                    return@withContext cachedConfig
+                }
+            }
+
+            try {
+                Log.d("CONFIG", "Fetching from network")
+                val json = fetchWithRetry(url, 3)
+                cacheJson(context, json)
+                saveFetchTime()
+
+                val root = Json.decodeFromString<RootConfig>(json)
+                return@withContext root.data.first()
+
+            } catch (e: Exception) {
+                if (cachedJson != null) {
+                    Log.d("CONFIG", "Falling back to cache")
+                    val root = Json.decodeFromString<RootConfig>(cachedJson)
+                    return@withContext root.data.first()
+                } else {
+                    throw e
+                }
+            }
         }
     }
 
@@ -82,5 +110,18 @@ class ConfigRepository(
             spinButton = BitmapFactory.decodeFile(spinFile.absolutePath),
             rotationConfig = config.wheel.rotation
         )
+    }
+
+    fun cacheJson(context: Context, json: String) {
+        val tempFile = File(context.filesDir, "config_temp.json")
+        val finalFile = File(context.filesDir, "config.json")
+
+        tempFile.writeText(json)
+        tempFile.renameTo(finalFile)
+    }
+
+    fun getCachedJson(context: Context): String? {
+        val file = File(context.filesDir, "config.json")
+        return if (file.exists()) file.readText() else null
     }
 }

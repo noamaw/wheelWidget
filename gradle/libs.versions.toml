@@ -12,6 +12,7 @@ appcompat = "1.7.1"
 material = "1.13.0"
 kotlinxSerialization = "1.8.0"
 glanceAppwidget = "1.1.1"
+reactNative = "0.73.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -33,6 +34,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
 androidx-glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glanceAppwidget" }
+react-android = { group = "com.facebook.react", name = "react-android", version.ref = "reactNative"}
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -1,10 +1,6 @@
-package com.example.spinwheelwidget
+package com.example.spinwheel.ui
 
-import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -13,8 +9,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,48 +21,48 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.spinwheel.SpinWheelLauncher
+import com.example.spinwheel.local.WheelPrefs
 import com.example.spinwheel.logic.SpinWheelEngine
+import com.example.spinwheel.logic.updateWidget
 import com.example.spinwheel.models.WheelUiModel
 import com.example.spinwheel.repository.ConfigRepository
-import com.example.spinwheelwidget.ui.theme.SpinWheelWidgetTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+@Composable
+fun SpinWheelScreen(
+    repository: ConfigRepository,
+    prefs: WheelPrefs
+) {
+    var uiModel by remember { mutableStateOf<WheelUiModel?>(null) }
 
-    lateinit var configRepository: ConfigRepository
+    LaunchedEffect(Unit) {
+        val config = repository.getConfig(
+            "https://raw.githubusercontent.com/noamaw/wheelWidget/refs/heads/main/urls_widget_config.json"
+        )
+        uiModel = repository.buildUiModel(config)
+    }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        SpinWheelLauncher.start(this)
-        enableEdgeToEdge()
-        configRepository = ConfigRepository(this)
-        setContent {
-            var wheelUiModel by remember { mutableStateOf<WheelUiModel?>(null) }
-            var rotation by remember { mutableFloatStateOf(0f) }
-            SpinWheelWidgetTheme {
-                LaunchedEffect(Unit) {
-                    val config = configRepository.getConfig("https://raw.githubusercontent.com/noamaw/wheelWidget/refs/heads/main/urls_widget_config.json")
-                    println(config)
-                    wheelUiModel = configRepository.buildUiModel(config)
-                    println(wheelUiModel)
-                }
-//                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-//                    Text("Spin Wheel Coming Soon")
-//                    if (wheelUiModel != null ) {
-//                        wheelUiModel?.let {
-//                            Log.d("Widget", "Showing the widget")
-//                            ShowWheelUi(it)
-//                        }
-//                    }
-//                }
-            }
+    Box(modifier = Modifier.fillMaxSize()) {
+        uiModel?.let {
+            SpinWheelContent(
+                wheelUiModel = it,
+                prefs = prefs
+            )
         }
     }
 }
 
 @Composable
-fun ShowWheelUi(wheelUiModel: WheelUiModel) {
+fun SpinWheelContent(
+    wheelUiModel: WheelUiModel,
+    prefs: WheelPrefs
+) {
+    val context = LocalContext.current
+
     var rotation by remember { mutableFloatStateOf(0f) }
     var isSpinning by remember { mutableStateOf(false) }
 
@@ -83,19 +77,36 @@ fun ShowWheelUi(wheelUiModel: WheelUiModel) {
         finishedListener = {
             isSpinning = false
 
-            val selectedIndex = engine.getSelectedSegment(
-                rotation = rotation,
-                segmentCount = 12
-            )
+            val result = engine.getSelectedSegment(rotation, 12)
 
-            Log.d("RESULT", "Selected index: $selectedIndex")
+            // ✅ Save result
+            prefs.saveResult(result)
+
+            // ✅ Update widget
+            CoroutineScope(Dispatchers.IO).launch {
+                updateWidget(context)
+            }
+
+            Log.d("RESULT", "Selected index: $result")
         },
         label = "rotation"
     )
 
+    val hasStarted = remember { mutableStateOf(false) }
+
+    LaunchedEffect(wheelUiModel) {
+        if (!hasStarted.value) {
+            hasStarted.value = true
+            isSpinning = true
+            rotation += engine.generateSpin(
+                wheelUiModel.rotationConfig.minimumSpins,
+                wheelUiModel.rotationConfig.maximumSpins
+            )
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // Background
         Image(
             bitmap = wheelUiModel.background.asImageBitmap(),
             contentDescription = null,
@@ -108,7 +119,6 @@ fun ShowWheelUi(wheelUiModel: WheelUiModel) {
             contentAlignment = Alignment.Center
         ) {
 
-            // 🎡 Wheel (rotating)
             Image(
                 bitmap = wheelUiModel.wheel.asImageBitmap(),
                 contentDescription = null,
@@ -117,14 +127,12 @@ fun ShowWheelUi(wheelUiModel: WheelUiModel) {
                     .graphicsLayer(rotationZ = animatedRotation)
             )
 
-            // Frame
             Image(
                 bitmap = wheelUiModel.frame.asImageBitmap(),
                 contentDescription = null,
                 modifier = Modifier.size(300.dp)
             )
 
-            // Spin button
             Image(
                 bitmap = wheelUiModel.spinButton.asImageBitmap(),
                 contentDescription = null,
@@ -143,4 +151,3 @@ fun ShowWheelUi(wheelUiModel: WheelUiModel) {
         }
     }
 }
-
